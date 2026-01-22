@@ -2,9 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, YAxis, CartesianGrid, Legend } from 'recharts';
 import { useExpenses } from '../context/ExpenseContext';
+import { useAuth } from '../context/AuthContext';
 
 const DashboardPage: React.FC = () => {
     const { expenses } = useExpenses();
+    const { hasPermission } = useAuth();
     const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
     
     // Budget Category State for Modal
@@ -20,7 +22,7 @@ const DashboardPage: React.FC = () => {
     const [ppriChartData, setPpriChartData] = useState<any[]>([]);
     const [diariasChartData, setDiariasChartData] = useState<any[]>([]);
     
-    // Temp Budget State: Structure { MonthName: { Geral: "100", PPRI_Budget: "50", PPRI_Actual: "10", ... } }
+    // Temp Budget State
     const [tempData, setTempData] = useState<{ [month: string]: { [key: string]: string } }>({});
 
     // Helper to parse BRL value string to number
@@ -99,11 +101,7 @@ const DashboardPage: React.FC = () => {
                 const monthIndex = parseInt(parts[1], 10) - 1;
                 if (monthIndex >= 0 && monthIndex < 12) {
                     const val = parseCurrency(item.val);
-                    
-                    // Add to General
                     importedActuals.Geral[monthIndex] += val;
-
-                    // Add to specific categories based on Type
                     if (item.type === 'PPRI') {
                         importedActuals.PPRI[monthIndex] += val;
                     } else if (item.type === 'Diárias') {
@@ -113,7 +111,7 @@ const DashboardPage: React.FC = () => {
             }
         });
 
-        // 2. Load Manual Data (Budgets & Manual Actuals) from LocalStorage
+        // 2. Load Manual Data
         let savedData: { [month: string]: { [key: string]: number } } = {};
         try {
             const stored = localStorage.getItem('FINANCE_CORE_DATA_V3');
@@ -124,18 +122,12 @@ const DashboardPage: React.FC = () => {
         const buildData = (category: 'Geral' | 'PPRI' | 'Diárias') => {
             return template.map(t => {
                 const monthData = savedData[t.name] || {};
-                
                 const budgetVal = monthData[`${category}_Budget`] || 0;
-                
-                // For General, we only use imported actuals.
-                // For PPRI/Diárias, we use Imported + Manual.
                 let actualVal = importedActuals[category][t.index];
-                
                 if (category !== 'Geral') {
                     const manualActual = monthData[`${category}_Actual`] || 0;
                     actualVal += manualActual;
                 }
-
                 return {
                     name: t.name,
                     index: t.index,
@@ -149,7 +141,7 @@ const DashboardPage: React.FC = () => {
         setPpriChartData(buildData('PPRI'));
         setDiariasChartData(buildData('Diárias'));
 
-    }, [trendExpenses, expenses, isBudgetModalOpen]); // Recalculate when expenses or modal closes (save)
+    }, [trendExpenses, expenses, isBudgetModalOpen]);
 
     // KPI Totals
     const totalActual = useMemo(() => kpiExpenses.reduce((acc, item) => acc + parseCurrency(item.val), 0), [kpiExpenses]);
@@ -181,7 +173,8 @@ const DashboardPage: React.FC = () => {
 
     // Modal Handlers
     const openBudgetModal = () => {
-        // Hydrate temp state from local storage logic (Source of truth for edits)
+        if (!hasPermission('manage_budget')) return;
+
         let savedData: { [month: string]: { [key: string]: number } } = {};
         try {
             const stored = localStorage.getItem('FINANCE_CORE_DATA_V3');
@@ -189,10 +182,8 @@ const DashboardPage: React.FC = () => {
         } catch (e) {}
 
         const currentBudgetsState: { [month: string]: { [key: string]: string } } = {};
-        
         mainChartData.forEach((item) => {
             const mData = savedData[item.name] || {};
-            
             currentBudgetsState[item.name] = {
                 'Geral_Budget': (mData['Geral_Budget'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                 'PPRI_Budget': (mData['PPRI_Budget'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -201,7 +192,6 @@ const DashboardPage: React.FC = () => {
                 'Diárias_Actual': (mData['Diárias_Actual'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
             };
         });
-        
         setTempData(currentBudgetsState);
         setIsBudgetModalOpen(true);
     };
@@ -210,7 +200,6 @@ const DashboardPage: React.FC = () => {
         const numericValue = value.replace(/\D/g, '');
         const floatValue = Number(numericValue) / 100;
         const formatted = floatValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        
         setTempData(prev => ({
             ...prev,
             [month]: {
@@ -221,25 +210,20 @@ const DashboardPage: React.FC = () => {
     };
 
     const saveData = () => {
-        // Load existing first to merge
         let existingStore: { [month: string]: { [key: string]: number } } = {};
         try {
             const stored = localStorage.getItem('FINANCE_CORE_DATA_V3');
             if (stored) existingStore = JSON.parse(stored);
         } catch(e) {}
 
-        // Update with temp data
         Object.keys(tempData).forEach(month => {
             const monthObj = tempData[month];
-            
             const getVal = (fullKey: string) => {
                 const str = monthObj[fullKey];
                 if (!str) return 0;
                 const num = parseFloat(str.replace(/\./g, '').replace(',', '.'));
                 return isNaN(num) ? 0 : num;
             };
-
-            // Merge monthly data
             existingStore[month] = {
                 ...(existingStore[month] || {}),
                 'Geral_Budget': getVal('Geral_Budget'),
@@ -249,15 +233,12 @@ const DashboardPage: React.FC = () => {
                 'Diárias_Actual': getVal('Diárias_Actual'),
             };
         });
-
         localStorage.setItem('FINANCE_CORE_DATA_V3', JSON.stringify(existingStore));
         setIsBudgetModalOpen(false);
-        // Effect will trigger re-render
     };
 
     const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-    // Render helper for charts
     const renderBarChart = (data: any[], colorActual: string, colorBudget: string, title: string) => (
         <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} barGap={4}>
@@ -279,7 +260,6 @@ const DashboardPage: React.FC = () => {
 
     return (
         <div className="flex h-full overflow-hidden relative">
-            {/* Budget Configuration Modal */}
             {isBudgetModalOpen && (
                 <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
                     <div className="bg-white dark:bg-card-dark w-full max-w-4xl rounded-xl shadow-2xl border border-slate-200 dark:border-border-dark flex flex-col max-h-[90vh]">
@@ -294,7 +274,6 @@ const DashboardPage: React.FC = () => {
                                 </button>
                             </div>
                             
-                            {/* Tabs */}
                             <div className="flex space-x-1 bg-slate-100 dark:bg-surface-dark p-1 rounded-lg">
                                 {['Geral', 'PPRI', 'Diárias'].map((tab) => (
                                     <button
@@ -311,10 +290,7 @@ const DashboardPage: React.FC = () => {
                                 ))}
                             </div>
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-3 text-center">
-                                Editando: <strong className="text-primary">{activeBudgetTab}</strong>. 
-                                {activeBudgetTab !== 'Geral' 
-                                    ? ' Insira a Meta (Orçado) e, opcionalmente, o Realizado Manual.' 
-                                    : ' Apenas a Meta pode ser editada. O Realizado é automático via Excel.'}
+                                Editando: <strong className="text-primary">{activeBudgetTab}</strong>
                             </p>
                         </div>
 
@@ -325,7 +301,6 @@ const DashboardPage: React.FC = () => {
                                     <label className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider block mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">{item.name}</label>
                                     
                                     <div className="space-y-3">
-                                        {/* Budget Input */}
                                         <div className="space-y-1">
                                             <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Meta (Orçado)</span>
                                             <div className="relative">
@@ -341,7 +316,6 @@ const DashboardPage: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* Actual Input (Only for PPRI and Diárias) */}
                                         {activeBudgetTab !== 'Geral' && (
                                              <div className="space-y-1">
                                                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-bold">Realizado (Manual)</span>
@@ -413,7 +387,6 @@ const DashboardPage: React.FC = () => {
             </aside>
             <main className="flex-1 overflow-y-auto p-6 space-y-6">
                 
-                {/* Header with Filters */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-xl font-bold dark:text-white">Visão Geral de Análises</h1>
@@ -452,12 +425,18 @@ const DashboardPage: React.FC = () => {
                             <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">expand_more</span>
                         </div>
                         <div className="h-6 w-px bg-slate-300 dark:bg-slate-700 mx-1 hidden md:block"></div>
-                        <button onClick={() => { setActiveBudgetTab('Geral'); openBudgetModal(); }} className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition-colors">
-                            <span className="material-symbols-outlined text-sm">edit</span> Metas & Dados
-                        </button>
-                        <Link to="/import" className="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
-                            <span className="material-symbols-outlined text-sm">upload</span> Importar
-                        </Link>
+                        
+                        {hasPermission('manage_budget') && (
+                            <button onClick={() => { setActiveBudgetTab('Geral'); openBudgetModal(); }} className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition-colors">
+                                <span className="material-symbols-outlined text-sm">edit</span> Metas & Dados
+                            </button>
+                        )}
+                        
+                        {hasPermission('import_data') && (
+                            <Link to="/import" className="bg-primary hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-semibold flex items-center gap-2 transition-colors shadow-lg shadow-primary/20">
+                                <span className="material-symbols-outlined text-sm">upload</span> Importar
+                            </Link>
+                        )}
                     </div>
                 </div>
                 
@@ -502,7 +481,6 @@ const DashboardPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Main Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 bg-white dark:bg-card-dark p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800">
                         <div className="flex justify-between items-center mb-6">
@@ -545,34 +523,38 @@ const DashboardPage: React.FC = () => {
                             </div>
                         )}
                         <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
-                             <Link to="/review" className="block w-full text-center py-2 text-xs font-semibold text-primary hover:bg-primary/5 rounded transition-colors uppercase tracking-wider">Ver Relatório Completo</Link>
+                             {hasPermission('view_review') ? (
+                                 <Link to="/review" className="block w-full text-center py-2 text-xs font-semibold text-primary hover:bg-primary/5 rounded transition-colors uppercase tracking-wider">Ver Relatório Completo</Link>
+                             ) : (
+                                 <span className="block w-full text-center py-2 text-xs font-semibold text-slate-400 cursor-not-allowed uppercase tracking-wider">Acesso Restrito</span>
+                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Specific Charts Row (PPRI & Diárias) */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-                    {/* PPRI Chart */}
                     <div className="bg-white dark:bg-card-dark p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[300px]">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">PPRI: ORÇADO VS REALIZADO</h3>
-                            <button onClick={() => { setActiveBudgetTab('PPRI'); openBudgetModal(); }} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1">
-                                <span className="material-symbols-outlined text-sm">edit</span> Editar Metas/Dados
-                            </button>
+                            {hasPermission('manage_budget') && (
+                                <button onClick={() => { setActiveBudgetTab('PPRI'); openBudgetModal(); }} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-sm">edit</span> Editar Metas/Dados
+                                </button>
+                            )}
                         </div>
                         <div className="flex-1 w-full h-full relative">
-                            {/* Always render chart, allow empty values to be shown as zero bars with axis */}
                              {renderBarChart(ppriChartData, '#135bec', '#93c5fd', 'PPRI')}
                         </div>
                     </div>
 
-                    {/* Diarias Chart */}
                     <div className="bg-white dark:bg-card-dark p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[300px]">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">Diárias: Orçado vs Realizado</h3>
-                            <button onClick={() => { setActiveBudgetTab('Diárias'); openBudgetModal(); }} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1">
-                                <span className="material-symbols-outlined text-sm">edit</span> Editar Metas/Dados
-                            </button>
+                             {hasPermission('manage_budget') && (
+                                <button onClick={() => { setActiveBudgetTab('Diárias'); openBudgetModal(); }} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-sm">edit</span> Editar Metas/Dados
+                                </button>
+                            )}
                         </div>
                         <div className="flex-1 w-full h-full relative">
                              {renderBarChart(diariasChartData, '#3388a1', '#93c5fd', 'Diárias')}

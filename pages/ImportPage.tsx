@@ -3,13 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { useExpenses } from '../context/ExpenseContext';
 import { ExpenseItem } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 const ImportPage: React.FC = () => {
     const navigate = useNavigate();
     const { setExpenses } = useExpenses();
+    const { hasPermission } = useAuth();
     const [isDragging, setIsDragging] = useState(false);
     const [file, setFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+
+    if (!hasPermission('import_data')) {
+        return (
+            <div className="flex h-full flex-col items-center justify-center p-8 bg-background-light dark:bg-background-dark text-center">
+                <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4">
+                    <span className="material-symbols-outlined text-4xl text-red-500">block</span>
+                </div>
+                <h2 className="text-2xl font-bold dark:text-white mb-2">Acesso Negado</h2>
+                <p className="text-slate-500 dark:text-slate-400 mb-6">Você não tem permissão para importar dados financeiros.</p>
+                <button onClick={() => navigate('/')} className="px-6 py-2 bg-primary text-white rounded font-bold hover:bg-blue-700 transition-colors">Voltar ao Dashboard</button>
+            </div>
+        );
+    }
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -97,8 +112,6 @@ const ImportPage: React.FC = () => {
                 const sheetName = workbook.SheetNames[0];
                 const sheet = workbook.Sheets[sheetName];
                 const jsonData = XLSX.utils.sheet_to_json(sheet, { raw: true, defval: "" });
-
-                console.log("Dados Brutos Importados:", jsonData);
 
                 const currentYear = new Date().getFullYear();
 

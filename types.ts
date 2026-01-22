@@ -18,6 +18,14 @@ export interface SidebarProps {
 // Auth Types
 export type UserRole = 'Administrador' | 'Gestor' | 'Auditor' | 'Visualizador';
 
+export type PermissionType = 
+    | 'view_dashboard'      // Ver Dashboard
+    | 'manage_budget'       // Editar Metas/Orçamento
+    | 'import_data'         // Importar Excel
+    | 'view_review'         // Ver Tabela de Revisão
+    | 'edit_expenses'       // Editar/Excluir Despesas Individuais
+    | 'manage_permissions'; // Alterar regras de acesso
+
 export interface User {
     name: string;
     email: string;
@@ -30,4 +38,7 @@ export interface AuthContextType {
     isAuthenticated: boolean;
     login: (name: string, role: UserRole) => void;
     logout: () => void;
+    hasPermission: (permission: PermissionType) => boolean;
+    rolePermissions: Record<UserRole, PermissionType[]>;
+    updateRolePermissions: (role: UserRole, permissions: PermissionType[]) => void;
 }

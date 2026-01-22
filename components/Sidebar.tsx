@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Sidebar: React.FC = () => {
     const location = useLocation();
-    const { user, logout } = useAuth();
+    const { user, logout, hasPermission } = useAuth();
     const isActive = (path: string) => location.pathname === path;
 
     if (!user) return null;
@@ -22,21 +22,36 @@ const Sidebar: React.FC = () => {
                     <span className="material-symbols-outlined">dashboard</span>
                     <span>Dashboard Principal</span>
                 </Link>
-                <Link to="/review" className={`flex items-center gap-3 px-4 py-3 rounded transition-colors ${isActive('/review') || isActive('/review-alerts') || isActive('/review-permissions') ? 'bg-primary/10 text-primary font-medium' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-primary/10'}`}>
-                    <span className="material-symbols-outlined">table_chart</span>
-                    <span>Revisão de Dados</span>
-                </Link>
-                <Link to="/import" className={`flex items-center gap-3 px-4 py-3 rounded transition-colors ${isActive('/import') ? 'bg-primary/10 text-primary font-medium' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-primary/10'}`}>
-                    <span className="material-symbols-outlined">upload_file</span>
-                    <span>Importar Excel</span>
-                </Link>
-                <div className="pt-4 pb-2 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Sub-Vistas Revisão</div>
-                <Link to="/review-alerts" className={`flex items-center gap-3 px-4 py-1.5 text-xs transition-colors ${isActive('/review-alerts') ? 'text-primary font-medium' : 'text-slate-500 hover:text-primary'}`}>
-                        <span className="material-symbols-outlined text-sm">notification_important</span> Alertas de Orçamento
-                </Link>
-                <Link to="/review-permissions" className={`flex items-center gap-3 px-4 py-1.5 text-xs transition-colors ${isActive('/review-permissions') ? 'text-primary font-medium' : 'text-slate-500 hover:text-primary'}`}>
-                        <span className="material-symbols-outlined text-sm">shield</span> Permissões
-                </Link>
+                
+                {hasPermission('view_review') && (
+                    <Link to="/review" className={`flex items-center gap-3 px-4 py-3 rounded transition-colors ${isActive('/review') ? 'bg-primary/10 text-primary font-medium' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-primary/10'}`}>
+                        <span className="material-symbols-outlined">table_chart</span>
+                        <span>Revisão de Dados</span>
+                    </Link>
+                )}
+
+                {hasPermission('import_data') && (
+                    <Link to="/import" className={`flex items-center gap-3 px-4 py-3 rounded transition-colors ${isActive('/import') ? 'bg-primary/10 text-primary font-medium' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-primary/10'}`}>
+                        <span className="material-symbols-outlined">upload_file</span>
+                        <span>Importar Excel</span>
+                    </Link>
+                )}
+
+                {(hasPermission('view_review') || hasPermission('manage_permissions')) && (
+                    <div className="pt-4 pb-2 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Avançado</div>
+                )}
+                
+                {hasPermission('view_review') && (
+                    <Link to="/review-alerts" className={`flex items-center gap-3 px-4 py-1.5 text-xs transition-colors ${isActive('/review-alerts') ? 'text-primary font-medium' : 'text-slate-500 hover:text-primary'}`}>
+                            <span className="material-symbols-outlined text-sm">notification_important</span> Alertas de Orçamento
+                    </Link>
+                )}
+                
+                {hasPermission('manage_permissions') && (
+                    <Link to="/review-permissions" className={`flex items-center gap-3 px-4 py-1.5 text-xs transition-colors ${isActive('/review-permissions') ? 'text-primary font-medium' : 'text-slate-500 hover:text-primary'}`}>
+                            <span className="material-symbols-outlined text-sm">shield</span> Permissões de Acesso
+                    </Link>
+                )}
             </nav>
             <div className="p-4 border-t border-slate-200 dark:border-border-dark">
                 <div className="flex items-center gap-3 px-2">
