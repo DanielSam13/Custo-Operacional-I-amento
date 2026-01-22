@@ -197,6 +197,23 @@ const DashboardPage: React.FC = () => {
         return data.filter(d => d.value > 0);
     }, [kpiExpenses]);
 
+    // --- Sub-Chart Totals ---
+    const ppriTotals = useMemo(() => {
+        return ppriChartData.reduce((acc, curr) => ({
+            budget: acc.budget + (curr.Budget || 0),
+            actual: acc.actual + (curr.Actual || 0)
+        }), { budget: 0, actual: 0 });
+    }, [ppriChartData]);
+
+    const diariasTotals = useMemo(() => {
+        return diariasChartData.reduce((acc, curr) => ({
+            budget: acc.budget + (curr.Budget || 0),
+            actual: acc.actual + (curr.Actual || 0)
+        }), { budget: 0, actual: 0 });
+    }, [diariasChartData]);
+
+    const formatMoney = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
     // Modal Handlers
     const openBudgetModal = () => {
         if (!hasPermission('manage_budget')) return;
@@ -474,7 +491,7 @@ const DashboardPage: React.FC = () => {
                             <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                 Total Orçado <span className="text-[10px] opacity-70">({selectedMonth ? months[parseInt(selectedMonth)] : 'Anual'})</span>
                             </div>
-                            <div className="text-2xl font-bold dark:text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalBudget)}</div>
+                            <div className="text-2xl font-bold dark:text-white">{formatMoney(totalBudget)}</div>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-card-dark p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex items-center gap-4 hover:border-primary/50 transition-colors">
@@ -483,7 +500,7 @@ const DashboardPage: React.FC = () => {
                             <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
                                 Realizado <span className="text-[10px] opacity-70">({selectedMonth ? months[parseInt(selectedMonth)] : 'Período'})</span>
                             </div>
-                            <div className="text-2xl font-bold text-emerald-500">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalActual)}</div>
+                            <div className="text-2xl font-bold text-emerald-500">{formatMoney(totalActual)}</div>
                         </div>
                     </div>
                     <div className="bg-white dark:bg-card-dark p-4 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex items-center justify-between relative overflow-hidden">
@@ -577,7 +594,7 @@ const DashboardPage: React.FC = () => {
                                             <div className="flex-1">
                                                 <div className="flex justify-between text-[11px] mb-1">
                                                     <span className="font-semibold truncate max-w-[100px] uppercase dark:text-slate-300" title={type}>{type}</span>
-                                                    <span className="font-mono dark:text-slate-300">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}</span>
+                                                    <span className="font-mono dark:text-slate-300">{formatMoney(value)}</span>
                                                 </div>
                                                 <div className="w-full bg-slate-100 dark:bg-slate-700 h-1 rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${(value / costRanking[0][1]) * 100}%` }}></div></div>
                                             </div>
@@ -598,8 +615,18 @@ const DashboardPage: React.FC = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
                     <div className="bg-white dark:bg-card-dark p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[300px]">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">PPRI: ORÇADO VS REALIZADO</h3>
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">PPRI: ORÇADO VS REALIZADO</h3>
+                                <div className="flex gap-3 mt-1.5">
+                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                        Orçado: <span className="text-primary font-bold">{formatMoney(ppriTotals.budget)}</span>
+                                    </span>
+                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                        Realizado: <span className="text-chart-blue font-bold">{formatMoney(ppriTotals.actual)}</span>
+                                    </span>
+                                </div>
+                            </div>
                             {hasPermission('manage_budget') && (
                                 <button onClick={() => { setActiveBudgetTab('PPRI'); openBudgetModal(); }} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1">
                                     <span className="material-symbols-outlined text-sm">edit</span> Editar Metas/Dados
@@ -612,8 +639,18 @@ const DashboardPage: React.FC = () => {
                     </div>
 
                     <div className="bg-white dark:bg-card-dark p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col min-h-[300px]">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">Diárias: Orçado vs Realizado</h3>
+                        <div className="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700 dark:text-slate-200">DIÁRIAS: ORÇADO VS REALIZADO</h3>
+                                <div className="flex gap-3 mt-1.5">
+                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                        Orçado: <span className="text-primary font-bold">{formatMoney(diariasTotals.budget)}</span>
+                                    </span>
+                                    <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                                        Realizado: <span className="text-chart-blue font-bold">{formatMoney(diariasTotals.actual)}</span>
+                                    </span>
+                                </div>
+                            </div>
                              {hasPermission('manage_budget') && (
                                 <button onClick={() => { setActiveBudgetTab('Diárias'); openBudgetModal(); }} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1">
                                     <span className="material-symbols-outlined text-sm">edit</span> Editar Metas/Dados
