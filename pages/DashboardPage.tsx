@@ -171,6 +171,32 @@ const DashboardPage: React.FC = () => {
             .slice(0, 5); 
     }, [kpiExpenses]);
 
+    // Distribution Pie Chart Data
+    const distributionData = useMemo(() => {
+        const totals = { PPRI: 0, Diarias: 0, Outros: 0 };
+        kpiExpenses.forEach(item => {
+            const val = parseCurrency(item.val);
+            const type = item.type ? item.type.toUpperCase() : '';
+            
+            if (type.includes('PPRI')) {
+                totals.PPRI += val;
+            } else if (type.includes('DIÁRIA') || type.includes('DIARIA')) {
+                totals.Diarias += val;
+            } else {
+                totals.Outros += val;
+            }
+        });
+
+        const data = [
+            { name: 'PPRI', value: totals.PPRI, color: '#135bec' },
+            { name: 'Diárias', value: totals.Diarias, color: '#3388a1' },
+            { name: 'Outros', value: totals.Outros, color: '#94a3b8' }
+        ];
+
+        // Filter out zero values to avoid empty segments
+        return data.filter(d => d.value > 0);
+    }, [kpiExpenses]);
+
     // Modal Handlers
     const openBudgetModal = () => {
         if (!hasPermission('manage_budget')) return;
@@ -497,37 +523,75 @@ const DashboardPage: React.FC = () => {
                         </div>
                     </div>
                     
-                    <div className="bg-white dark:bg-card-dark p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col">
-                        <h3 className="text-xs font-bold uppercase tracking-wide mb-6 text-slate-700 dark:text-slate-200 flex justify-between">
-                            Top 5 Custos <span className="text-[10px] text-slate-500 font-normal">({selectedMonth ? months[parseInt(selectedMonth)] : 'Total'})</span>
-                        </h3>
-                        {costRanking.length === 0 ? (
-                            <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 opacity-50 min-h-[160px]">
-                                <span className="material-symbols-outlined text-4xl text-slate-300">bar_chart</span>
-                                <p className="text-xs text-slate-500">Sem dados para o período selecionado.</p>
+                    <div className="bg-white dark:bg-card-dark p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col gap-6">
+                        
+                        {/* New Pie Chart Distribution */}
+                        <div>
+                             <h3 className="text-xs font-bold uppercase tracking-wide mb-4 text-slate-700 dark:text-slate-200 flex justify-between">
+                                Distribuição <span className="text-[10px] text-slate-500 font-normal">({selectedMonth ? months[parseInt(selectedMonth)] : 'Total'})</span>
+                            </h3>
+                            <div className="h-40 w-full relative">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie 
+                                            data={distributionData} 
+                                            innerRadius={40} 
+                                            outerRadius={60} 
+                                            paddingAngle={4} 
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {distributionData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip 
+                                            contentStyle={{ backgroundColor: '#162b35', borderColor: '#2c3e50', color: '#f1f5f9', fontSize: '12px', borderRadius: '4px' }}
+                                            itemStyle={{ color: '#f1f5f9' }}
+                                            formatter={(value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                                        />
+                                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '10px' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                {distributionData.length === 0 && (
+                                     <div className="absolute inset-0 flex items-center justify-center text-xs text-slate-400">Sem dados</div>
+                                )}
                             </div>
-                        ) : (
-                            <div className="space-y-4 flex-1">
-                                {costRanking.map(([type, value], i) => (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-surface-dark flex items-center justify-center font-bold text-slate-500 text-xs shadow-sm">{i + 1}</div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between text-xs mb-1">
-                                                <span className="font-semibold truncate max-w-[120px] uppercase dark:text-slate-300">{type}</span>
-                                                <span className="font-mono dark:text-slate-300">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}</span>
+                        </div>
+
+                        <div className="w-full h-px bg-slate-200 dark:bg-slate-700"></div>
+
+                        <div className="flex-1 flex flex-col">
+                            <h3 className="text-xs font-bold uppercase tracking-wide mb-4 text-slate-700 dark:text-slate-200 flex justify-between">
+                                Ranking de Custos
+                            </h3>
+                            {costRanking.length === 0 ? (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 opacity-50 min-h-[100px]">
+                                    <p className="text-xs text-slate-500">Sem dados.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[180px]">
+                                    {costRanking.map(([type, value], i) => (
+                                        <div key={i} className="flex items-center gap-3">
+                                            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-surface-dark flex items-center justify-center font-bold text-slate-500 text-[10px] shadow-sm">{i + 1}</div>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between text-[11px] mb-1">
+                                                    <span className="font-semibold truncate max-w-[100px] uppercase dark:text-slate-300" title={type}>{type}</span>
+                                                    <span className="font-mono dark:text-slate-300">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 dark:bg-slate-700 h-1 rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${(value / costRanking[0][1]) * 100}%` }}></div></div>
                                             </div>
-                                            <div className="w-full bg-slate-100 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${(value / costRanking[0][1]) * 100}%` }}></div></div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                            )}
+                            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+                                {hasPermission('view_review') ? (
+                                    <Link to="/review" className="block w-full text-center text-[10px] font-semibold text-primary hover:underline uppercase tracking-wider">Ver Detalhes</Link>
+                                ) : (
+                                    <span className="block w-full text-center text-[10px] font-semibold text-slate-400 cursor-not-allowed uppercase tracking-wider">Restrito</span>
+                                )}
                             </div>
-                        )}
-                        <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
-                             {hasPermission('view_review') ? (
-                                 <Link to="/review" className="block w-full text-center py-2 text-xs font-semibold text-primary hover:bg-primary/5 rounded transition-colors uppercase tracking-wider">Ver Relatório Completo</Link>
-                             ) : (
-                                 <span className="block w-full text-center py-2 text-xs font-semibold text-slate-400 cursor-not-allowed uppercase tracking-wider">Acesso Restrito</span>
-                             )}
                         </div>
                     </div>
                 </div>

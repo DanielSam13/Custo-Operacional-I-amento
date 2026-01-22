@@ -1,5 +1,5 @@
 {
-  "name": "IçamentoCusto",
+  "name": "IçamentoPrice",
   "description": "A comprehensive travel expense analytics dashboard featuring data visualization, excel import mapping, and detailed expense review workflows.",
   "requestFramePermissions": []
 }

@@ -34,7 +34,7 @@ const LoginPage: React.FC = () => {
                 <div className="p-8 pb-6 text-center border-b border-slate-100 dark:border-slate-800">
                     <div className="inline-flex items-center gap-2 text-primary font-bold text-2xl uppercase tracking-tighter mb-2">
                         <span className="material-symbols-outlined text-4xl">analytics</span>
-                        <span>FinanceCore</span>
+                        <span>IçamentoPrice</span>
                     </div>
                     <p className="text-slate-500 dark:text-slate-400 text-sm">Acesse o painel de controle financeiro</p>
                 </div>
@@ -106,7 +106,7 @@ const LoginPage: React.FC = () => {
                 </form>
 
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-center">
-                    <p className="text-xs text-slate-400">© 2024 FinanceCore Analytics. v1.0.2</p>
+                    <p className="text-xs text-slate-400">© 2024 IçamentoPrice Analytics. v1.0.2</p>
                 </div>
             </div>
         </div>

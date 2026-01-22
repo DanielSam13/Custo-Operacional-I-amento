@@ -14,7 +14,7 @@ const Sidebar: React.FC = () => {
             <div className="p-6">
                 <div className="flex items-center gap-2 text-primary font-bold text-xl uppercase tracking-tighter cursor-pointer">
                     <span className="material-symbols-outlined text-3xl">analytics</span>
-                    <span>FinanceCore</span>
+                    <span>IçamentoPrice</span>
                 </div>
             </div>
             <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
