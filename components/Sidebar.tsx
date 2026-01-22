@@ -1,9 +1,13 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar: React.FC = () => {
     const location = useLocation();
+    const { user, logout } = useAuth();
     const isActive = (path: string) => location.pathname === path;
+
+    if (!user) return null;
 
     return (
         <aside className="w-64 flex-shrink-0 bg-white dark:bg-surface-dark border-r border-slate-200 dark:border-border-dark hidden lg:flex flex-col z-20">
@@ -36,12 +40,19 @@ const Sidebar: React.FC = () => {
             </nav>
             <div className="p-4 border-t border-slate-200 dark:border-border-dark">
                 <div className="flex items-center gap-3 px-2">
-                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs shadow-md">AD</div>
-                    <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-medium truncate">Admin User</p>
-                        <p className="text-xs text-slate-500 truncate text-[10px]">admin@enterprise.com</p>
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs shadow-md">
+                        {user.avatarInitials}
                     </div>
-                    <button className="text-slate-400 hover:text-primary transition-colors">
+                    <div className="flex-1 overflow-hidden">
+                        <div className="flex items-center gap-2">
+                             <p className="text-sm font-medium truncate">{user.name}</p>
+                             <span className="text-[9px] px-1 bg-slate-100 dark:bg-slate-700 rounded text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+                                {user.role.substring(0,3).toUpperCase()}
+                             </span>
+                        </div>
+                        <p className="text-xs text-slate-500 truncate text-[10px]">{user.email}</p>
+                    </div>
+                    <button onClick={logout} className="text-slate-400 hover:text-red-500 transition-colors" title="Sair">
                         <span className="material-symbols-outlined">logout</span>
                     </button>
                 </div>
