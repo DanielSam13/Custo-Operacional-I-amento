@@ -80,8 +80,6 @@ const ImportPage: React.FC = () => {
              return `${d}/${m}/${y}`;
         }
         
-        // 4. Handle "Janeiro", "Fev", etc - though unlikely for "Date" column
-        // Return original if parsing fails, handled in mapping
         return strVal;
     }
 
@@ -114,9 +112,8 @@ const ImportPage: React.FC = () => {
                     const valorStr = valRaw ? String(valRaw) : '0';
                     let finalDate = normalizeDate(dateRaw);
                     
-                    // Fallback date if missing/invalid
                     if (finalDate === 'N/A' || !finalDate.includes('/')) {
-                        finalDate = `01/01/${currentYear}`; // Default to Jan 1st of current year so it shows in charts
+                        finalDate = `01/01/${currentYear}`; 
                     }
 
                     let numericVal = 0;
@@ -135,20 +132,37 @@ const ImportPage: React.FC = () => {
                     
                     const isExceeded = numericVal > 2000;
                     const finalName = nameRaw ? String(nameRaw).trim() : 'Não Identificado';
+                    
+                    // Smart Categorization for PPRI and Diárias
+                    let finalType = typeRaw ? String(typeRaw) : 'Geral';
+                    const lowerType = finalType.toLowerCase();
+                    const lowerName = finalName.toLowerCase();
+
+                    // Prioritize detection unless the column explicitly stated "PPRI" in the type column already
+                    if (!finalType.toUpperCase().includes('PPRI') && !finalType.toUpperCase().includes('DIÁRIA')) {
+                        if (lowerType.includes('ppri') || lowerName.includes('ppri')) {
+                            finalType = 'PPRI';
+                        } else if (lowerType.includes('diaria') || lowerType.includes('diária') || lowerName.includes('diaria') || lowerName.includes('diária')) {
+                            finalType = 'Diárias';
+                        }
+                    } else {
+                        // Normalize existing
+                         if (lowerType.includes('ppri')) finalType = 'PPRI';
+                         if (lowerType.includes('diaria') || lowerType.includes('diária')) finalType = 'Diárias';
+                    }
 
                     return {
                         id: idRaw ? String(idRaw) : `AUTO-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
                         date: finalDate,
                         name: finalName.length > 0 ? finalName : 'Não Identificado',
                         val: valorStr.includes('R$') ? valorStr : `R$ ${valorStr}`,
-                        type: typeRaw || 'Geral',
+                        type: finalType,
                         status: 'Pendente', 
                         budget: isExceeded ? 'Exceeded' : 'Within',
                         _numericVal: isNaN(numericVal) ? 0 : numericVal
                     } as any;
                 });
 
-                // Permissive Filtering: Only drop if Value is essentially zero. Keep data even if name/date was patched.
                 const validData = mappedData.filter((item: any) => {
                     const hasValidValue = item._numericVal > 0.01; 
                     return hasValidValue;
@@ -195,7 +209,7 @@ const ImportPage: React.FC = () => {
             <div className="max-w-4xl mx-auto space-y-8 w-full">
                 <section>
                     <div className="mb-4">
-                        <h2 className="text-2xl font-bold">Importar Dados</h2>
+                        <h2 className="text-2xl font-bold dark:text-white">Importar Dados</h2>
                         <p className="text-slate-500 dark:text-slate-400">Envie sua planilha para mapear e processar as despesas de viagem.</p>
                     </div>
                     
@@ -231,7 +245,7 @@ const ImportPage: React.FC = () => {
 
                 <section className="space-y-4 animate-fade-in">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold flex items-center gap-2">
+                        <h2 className="text-xl font-bold flex items-center gap-2 dark:text-white">
                             <span className="material-symbols-outlined text-primary">alt_route</span> Mapeamento Inteligente
                         </h2>
                         {file ? (
@@ -248,9 +262,9 @@ const ImportPage: React.FC = () => {
                         <table className="w-full text-left">
                             <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
                                 <tr>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Campo do Sistema</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Coluna Excel Detectada</th>
-                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500">Prévia (Linha 1)</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Campo do Sistema</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Coluna Excel Detectada</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Prévia (Linha 1)</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200 dark:divide-slate-800 text-sm">
@@ -259,7 +273,7 @@ const ImportPage: React.FC = () => {
                                         <td className="px-6 py-4 font-medium flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
                                             <div className="flex flex-col">
-                                                <span>{field.sys}</span>
+                                                <span className="dark:text-slate-200">{field.sys}</span>
                                                 <span className="text-[10px] text-slate-400 font-normal">{field.pt}</span>
                                             </div>
                                         </td>
