@@ -66,27 +66,38 @@ const ImportPage: React.FC = () => {
     const normalizeDate = (val: any): string => {
         if (!val) return 'N/A';
 
-        // 1. Handle Excel Serial Number (e.g. 45300)
-        if (typeof val === 'number') {
-            // Excel counts from 1900. Approx check for valid recent dates.
-            if (val > 20000) {
-                const date = new Date(Math.round((val - 25569) * 86400 * 1000));
-                const day = String(date.getUTCDate()).padStart(2, '0');
-                const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-                const year = date.getUTCFullYear();
-                return `${day}/${month}/${year}`;
-            }
+        // 1. Handle JS Date Object (often returned by xlsx when cellDates: true)
+        if (val instanceof Date) {
+            // Use UTC methods to avoid timezone shifts often caused by Excel date parsing
+            const day = String(val.getUTCDate()).padStart(2, '0');
+            const month = String(val.getUTCMonth() + 1).padStart(2, '0');
+            const year = val.getUTCFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // 2. Handle Excel Serial Number (e.g. 45300) which might come as number or string
+        const asNumber = Number(val);
+        if (!isNaN(asNumber) && asNumber > 20000 && asNumber < 60000) {
+            // Excel counts from 1900. 
+            // 25569 is the offset for 1970-01-01. 
+            // 86400 * 1000 is milliseconds in a day.
+            // Using a small epsilon or rounding to handle floating point issues
+            const date = new Date(Math.round((asNumber - 25569) * 86400 * 1000));
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const year = date.getUTCFullYear();
+            return `${day}/${month}/${year}`;
         }
 
         const strVal = String(val).trim();
 
-        // 2. Handle YYYY-MM-DD (ISO)
+        // 3. Handle YYYY-MM-DD (ISO)
         if (strVal.match(/^\d{4}-\d{2}-\d{2}/)) {
             const [y, m, d] = strVal.split('-');
             return `${d}/${m}/${y}`; // Convert to DD/MM/YYYY
         }
 
-        // 3. Handle Already DD/MM/YYYY
+        // 4. Handle Already DD/MM/YYYY
         if (strVal.match(/^\d{1,2}\/\d{1,2}\/\d{4}/)) {
              const parts = strVal.split('/');
              const d = parts[0].padStart(2, '0');
@@ -108,9 +119,12 @@ const ImportPage: React.FC = () => {
             if (!data) return;
 
             try {
+                // Using cellDates: true to let XLSX parse dates automatically where possible
                 const workbook = XLSX.read(data, { type: 'binary', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const sheet = workbook.Sheets[sheetName];
+                
+                // raw: true gives us the Date objects if cellDates was true, or raw numbers/strings
                 const jsonData = XLSX.utils.sheet_to_json(sheet, { raw: true, defval: "" });
 
                 const currentYear = new Date().getFullYear();
@@ -118,14 +132,16 @@ const ImportPage: React.FC = () => {
                 const mappedData: ExpenseItem[] = jsonData.map((row: any) => {
                     const valRaw = getRowValue(row, 'VALOR', 'Valor', 'Vlr', 'Quantia');
                     const nameRaw = getRowValue(row, 'COLABORADOR PARA DEPOSITO', 'Colaborador', 'Nome', 'Funcionário');
-                    const dateRaw = getRowValue(row, 'DATA', 'Data', 'Dt', 'Dia');
+                    const dateRaw = getRowValue(row, 'DATA', 'Data', 'Dt', 'Dia', 'DATA DO PAGAMENTO'); // Added 'DATA DO PAGAMENTO' common variation
                     const typeRaw = getRowValue(row, 'FINALIDADE', 'Finalidade', 'Categoria', 'Tipo', 'Descrição');
-                    const idRaw = getRowValue(row, 'Nº INT.', 'Nº INT', 'N INT', 'ID', 'Código', 'N. Int');
+                    const idRaw = getRowValue(row, 'Nº INT.', 'Nº INT', 'N INT', 'ID', 'Código', 'N. Int', 'N° INT.');
 
                     const valorStr = valRaw ? String(valRaw) : '0';
                     let finalDate = normalizeDate(dateRaw);
                     
+                    // Fallback to current year start if date failed parsing
                     if (finalDate === 'N/A' || !finalDate.includes('/')) {
+                        console.warn('Date parsing failed for row:', row, 'Raw Date:', dateRaw);
                         finalDate = `01/01/${currentYear}`; 
                     }
 
@@ -133,8 +149,10 @@ const ImportPage: React.FC = () => {
                     try {
                         const cleanVal = valorStr.replace('R$', '').trim();
                         if (cleanVal.includes(',') && cleanVal.includes('.')) {
+                             // Brazilian format 1.000,00 -> 1000.00
                              numericVal = parseFloat(cleanVal.replace(/\./g, '').replace(',', '.'));
                         } else if (cleanVal.includes(',')) {
+                            // Simple comma 10,00 -> 10.00
                             numericVal = parseFloat(cleanVal.replace(',', '.'));
                         } else {
                              numericVal = parseFloat(cleanVal);
