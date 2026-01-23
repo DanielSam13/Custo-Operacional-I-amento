@@ -8,6 +8,8 @@ const MicroAnalysisPage: React.FC = () => {
     const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
     const months = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    // Chaves usadas no localStorage (DashboardPage usa abreviações)
+    const monthKeys = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
     // --- HELPER FUNCTIONS ---
     const parseCurrency = (valStr: string) => {
@@ -32,8 +34,9 @@ const MicroAnalysisPage: React.FC = () => {
             if (stored) budgets = JSON.parse(stored);
         } catch(e) {}
 
-        const monthName = months[parseInt(selectedMonth)];
-        const monthBudget = budgets[monthName] || {};
+        const monthIndex = parseInt(selectedMonth);
+        const monthKey = monthKeys[monthIndex]; // Use a chave abreviada (Jan, Fev...)
+        const monthBudget = budgets[monthKey] || {};
         
         const totalBudget = monthBudget['Geral_Budget'] || 0;
         const ppriBudget = monthBudget['PPRI_Budget'] || 0;
