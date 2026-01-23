@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Sidebar: React.FC = () => {
     const location = useLocation();
     const { user, logout, hasPermission } = useAuth();
+    const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
     const isActive = (path: string) => location.pathname === path;
 
     if (!user) return null;
@@ -38,19 +39,37 @@ const Sidebar: React.FC = () => {
                 )}
 
                 {(hasPermission('view_review') || hasPermission('manage_permissions')) && (
-                    <div className="pt-4 pb-2 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Avançado</div>
+                    <button 
+                        onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                        className="w-full flex items-center justify-between pt-4 pb-2 px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hover:text-slate-600 dark:hover:text-slate-200 transition-colors focus:outline-none group mt-2"
+                    >
+                        <span>Avançado</span>
+                        <span className={`material-symbols-outlined text-[18px] transition-transform duration-200 ${isAdvancedOpen ? 'rotate-180 text-primary' : ''}`}>
+                            expand_more
+                        </span>
+                    </button>
                 )}
                 
-                {hasPermission('view_review') && (
-                    <Link to="/review-alerts" className={`flex items-center gap-3 px-4 py-1.5 text-xs transition-colors ${isActive('/review-alerts') ? 'text-primary font-medium' : 'text-slate-500 hover:text-primary'}`}>
-                            <span className="material-symbols-outlined text-sm">notification_important</span> Alertas de Orçamento
-                    </Link>
-                )}
-                
-                {hasPermission('manage_permissions') && (
-                    <Link to="/review-permissions" className={`flex items-center gap-3 px-4 py-1.5 text-xs transition-colors ${isActive('/review-permissions') ? 'text-primary font-medium' : 'text-slate-500 hover:text-primary'}`}>
-                            <span className="material-symbols-outlined text-sm">shield</span> Permissões de Acesso
-                    </Link>
+                {isAdvancedOpen && (
+                    <div className="space-y-1 animate-fade-in pl-2">
+                        {hasPermission('view_dashboard') && (
+                             <Link to="/analysis" className={`flex items-center gap-3 px-4 py-2 text-xs transition-colors rounded-r-md border-l-2 ${isActive('/analysis') ? 'border-primary text-primary font-medium bg-slate-50 dark:bg-white/5' : 'border-transparent text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-white/5'}`}>
+                                <span className="material-symbols-outlined text-sm">psychology</span> Análise Micro
+                            </Link>
+                        )}
+
+                        {hasPermission('view_review') && (
+                            <Link to="/review-alerts" className={`flex items-center gap-3 px-4 py-2 text-xs transition-colors rounded-r-md border-l-2 ${isActive('/review-alerts') ? 'border-primary text-primary font-medium bg-slate-50 dark:bg-white/5' : 'border-transparent text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-white/5'}`}>
+                                    <span className="material-symbols-outlined text-sm">notification_important</span> Alertas de Orçamento
+                            </Link>
+                        )}
+                        
+                        {hasPermission('manage_permissions') && (
+                            <Link to="/review-permissions" className={`flex items-center gap-3 px-4 py-2 text-xs transition-colors rounded-r-md border-l-2 ${isActive('/review-permissions') ? 'border-primary text-primary font-medium bg-slate-50 dark:bg-white/5' : 'border-transparent text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-white/5'}`}>
+                                    <span className="material-symbols-outlined text-sm">shield</span> Permissões de Acesso
+                            </Link>
+                        )}
+                    </div>
                 )}
             </nav>
             <div className="p-4 border-t border-slate-200 dark:border-border-dark">

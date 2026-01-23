@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ImportPage = lazy(() => import('./pages/ImportPage'));
 const ReviewPage = lazy(() => import('./pages/ReviewPage'));
+const MicroAnalysisPage = lazy(() => import('./pages/MicroAnalysisPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 
 // Componente de carregamento para exibir enquanto baixa as partes do site
@@ -80,6 +81,13 @@ const AppContent: React.FC = () => {
                             <ProtectedRoute>
                                 <Layout>
                                     <ReviewPage variant="default" />
+                                </Layout>
+                            </ProtectedRoute>
+                        } />
+                        <Route path="/analysis" element={
+                            <ProtectedRoute>
+                                <Layout>
+                                    <MicroAnalysisPage />
                                 </Layout>
                             </ProtectedRoute>
                         } />
