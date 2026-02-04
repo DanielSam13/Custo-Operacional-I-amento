@@ -10,7 +10,7 @@ interface ReviewPageProps {
 
 const ReviewPage: React.FC<ReviewPageProps> = ({ variant }) => {
     const navigate = useNavigate();
-    const { expenses } = useExpenses();
+    const { expenses, deleteExpense } = useExpenses();
     const { hasPermission, rolePermissions, updateRolePermissions, user } = useAuth();
     
     // Permission Matrix States
@@ -93,6 +93,13 @@ const ReviewPage: React.FC<ReviewPageProps> = ({ variant }) => {
         setFilterType('');
         setFilterStatus('');
         setFilterDate('');
+    };
+
+    // Action Handler
+    const handleDelete = (id: string) => {
+        if(window.confirm('Tem certeza que deseja remover este registro?')) {
+            deleteExpense(id);
+        }
     };
 
     // IF PERMISSIONS VIEW
@@ -331,7 +338,13 @@ const ReviewPage: React.FC<ReviewPageProps> = ({ variant }) => {
                                                     <td className="px-6 py-4 text-right">
                                                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary transition-colors" title="Editar"><span className="material-symbols-outlined text-lg">edit</span></button>
-                                                            <button className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-red-500 transition-colors" title="Remover"><span className="material-symbols-outlined text-lg">delete</span></button>
+                                                            <button 
+                                                                className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-red-500 transition-colors" 
+                                                                title="Remover"
+                                                                onClick={() => handleDelete(row.id)}
+                                                            >
+                                                                <span className="material-symbols-outlined text-lg">delete</span>
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 )}

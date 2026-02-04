@@ -4,6 +4,7 @@ import { ExpenseItem } from '../types';
 interface ExpenseContextType {
     expenses: ExpenseItem[];
     setExpenses: (expenses: ExpenseItem[]) => void;
+    deleteExpense: (id: string) => void;
     clearExpenses: () => void;
 }
 
@@ -25,13 +26,20 @@ export const ExpenseProvider: React.FC<{ children: ReactNode }> = ({ children })
     useEffect(() => {
         try {
             localStorage.setItem('FINANCE_CORE_EXPENSES', JSON.stringify(expenses));
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to save expenses to storage", error);
+            if (error.name === 'QuotaExceededError') {
+                alert("Atenção: O limite de armazenamento do navegador foi atingido. Alguns dados podem não ser salvos. Tente limpar dados antigos.");
+            }
         }
     }, [expenses]);
 
     const setExpenses = (newExpenses: ExpenseItem[]) => {
         setExpensesState(newExpenses);
+    };
+
+    const deleteExpense = (id: string) => {
+        setExpensesState(prev => prev.filter(item => item.id !== id));
     };
 
     const clearExpenses = () => {
@@ -40,7 +48,7 @@ export const ExpenseProvider: React.FC<{ children: ReactNode }> = ({ children })
     };
 
     return (
-        <ExpenseContext.Provider value={{ expenses, setExpenses, clearExpenses }}>
+        <ExpenseContext.Provider value={{ expenses, setExpenses, deleteExpense, clearExpenses }}>
             {children}
         </ExpenseContext.Provider>
     );

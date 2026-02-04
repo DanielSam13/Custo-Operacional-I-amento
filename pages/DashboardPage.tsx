@@ -225,7 +225,15 @@ const DashboardPage: React.FC = () => {
         } catch (e) {}
 
         const currentBudgetsState: { [month: string]: { [key: string]: string } } = {};
-        mainChartData.forEach((item) => {
+        // Use default template to ensure we get all months even if empty
+        const template = [
+            { name: 'Jan' }, { name: 'Fev' }, { name: 'Mar' },
+            { name: 'Abr' }, { name: 'Mai' }, { name: 'Jun' },
+            { name: 'Jul' }, { name: 'Ago' }, { name: 'Set' },
+            { name: 'Out' }, { name: 'Nov' }, { name: 'Dez' }
+        ];
+
+        template.forEach((item) => {
             const mData = savedData[item.name] || {};
             currentBudgetsState[item.name] = {
                 'Geral_Budget': (mData['Geral_Budget'] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -277,6 +285,7 @@ const DashboardPage: React.FC = () => {
             };
         });
         localStorage.setItem('FINANCE_CORE_DATA_V3', JSON.stringify(existingStore));
+        // Force state update to close modal and trigger useEffect
         setIsBudgetModalOpen(false);
     };
 
@@ -339,9 +348,9 @@ const DashboardPage: React.FC = () => {
 
                         <div className="p-6 overflow-y-auto">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {mainChartData.map((item) => (
-                                <div key={item.name} className="bg-slate-50 dark:bg-surface-dark/30 p-3 rounded border border-slate-100 dark:border-slate-800">
-                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider block mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">{item.name}</label>
+                            {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((monthKey) => (
+                                <div key={monthKey} className="bg-slate-50 dark:bg-surface-dark/30 p-3 rounded border border-slate-100 dark:border-slate-800">
+                                    <label className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider block mb-2 border-b border-slate-200 dark:border-slate-700 pb-1">{monthKey}</label>
                                     
                                     <div className="space-y-3">
                                         <div className="space-y-1">
@@ -351,8 +360,8 @@ const DashboardPage: React.FC = () => {
                                                 <input 
                                                     type="text" 
                                                     inputMode="numeric"
-                                                    value={tempData[item.name]?.[`${activeBudgetTab}_Budget`] || '0,00'}
-                                                    onChange={(e) => handleDataChange(item.name, 'Budget', e.target.value)}
+                                                    value={tempData[monthKey]?.[`${activeBudgetTab}_Budget`] || '0,00'}
+                                                    onChange={(e) => handleDataChange(monthKey, 'Budget', e.target.value)}
                                                     className="w-full pl-7 pr-2 py-1.5 bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-700 rounded text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-primary outline-none font-mono text-right"
                                                     placeholder="0,00"
                                                 />
@@ -367,8 +376,8 @@ const DashboardPage: React.FC = () => {
                                                     <input 
                                                         type="text" 
                                                         inputMode="numeric"
-                                                        value={tempData[item.name]?.[`${activeBudgetTab}_Actual`] || '0,00'}
-                                                        onChange={(e) => handleDataChange(item.name, 'Actual', e.target.value)}
+                                                        value={tempData[monthKey]?.[`${activeBudgetTab}_Actual`] || '0,00'}
+                                                        onChange={(e) => handleDataChange(monthKey, 'Actual', e.target.value)}
                                                         className="w-full pl-7 pr-2 py-1.5 bg-white dark:bg-card-dark border border-emerald-200 dark:border-emerald-900/50 rounded text-sm text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-emerald-500 outline-none font-mono text-right"
                                                         placeholder="0,00"
                                                     />
